@@ -90,6 +90,15 @@ GRANT ALL ON questionnaire_results TO authenticated, anon, service_role;
 **Problem**: New Supabase projects use `sb_secret_` and `sb_publishable_` prefix instead of JWT format
 **Solution**: Use the new format keys exactly as provided by Supabase
 
+### Issue 4: Vercel Deployment TypeScript Error
+**Problem**: Build fails with "Type 'undefined' is not assignable to type 'string'" in lib/supabase.ts:29
+**Solution**: Already fixed in commit 66db284 - added non-null assertion (!) to process.env.NEXT_PUBLIC_SUPABASE_URL
+**Note**: If Vercel deploys an older commit, manually trigger redeploy from Vercel dashboard
+
+### Issue 5: Security - Hardcoded Admin Password (FIXED)
+**Problem**: Dashboard had fallback password 'admin' hardcoded
+**Solution**: Removed in commit 66db284 - now only accepts environment variable password
+
 ## Testing Workflow
 1. Go to http://localhost:3000
 2. Enter patient details and clinician email
