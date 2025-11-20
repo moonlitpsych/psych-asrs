@@ -26,7 +26,7 @@ export function getServiceSupabase() {
   console.log(`Creating service client with ${keyType} key starting:`, serviceKey.substring(0, 10))
 
   return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL,
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
     serviceKey,
     {
       auth: {
