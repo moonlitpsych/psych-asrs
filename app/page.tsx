@@ -10,10 +10,30 @@ export default function Home() {
     patient_email: '',
     patient_dob: '',
     phone_number: '',
-    clinician_email: process.env.NEXT_PUBLIC_CLINICIAN_EMAIL || ''
+    clinician_email: process.env.NEXT_PUBLIC_CLINICIAN_EMAIL || '',
+    send_method: 'email' as 'email' | 'sms' | 'both'
   })
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState<any>(null)
+  const [copiedToClipboard, setCopiedToClipboard] = useState(false)
+
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedToClipboard(true)
+      setTimeout(() => setCopiedToClipboard(false), 2000)
+    } catch (err) {
+      console.error('Failed to copy text: ', err)
+    }
+  }
+
+  const formatSmsMessage = (patientName: string, link: string) => {
+    return `Hi ${patientName}, your provider has requested you complete the ADHD assessment. Please click the link below to begin (takes 5-10 min):
+
+${link}
+
+This link expires in 48 hours. Reply STOP to opt out.`
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -31,14 +51,19 @@ export default function Home() {
       setResult(data)
 
       if (data.success) {
-        // Reset form on success
-        setFormData({
-          patient_name: '',
-          patient_email: '',
-          patient_dob: '',
-          phone_number: '',
-          clinician_email: formData.clinician_email
-        })
+        // Reset form on success (but keep the result visible)
+        setCopiedToClipboard(false)
+        // Only reset form if not SMS (since user needs to copy the message)
+        if (formData.send_method === 'email') {
+          setFormData({
+            patient_name: '',
+            patient_email: '',
+            patient_dob: '',
+            phone_number: '',
+            clinician_email: formData.clinician_email,
+            send_method: 'email'
+          })
+        }
       }
     } catch (error) {
       setResult({ error: 'Failed to send questionnaire link' })
@@ -99,6 +124,47 @@ export default function Home() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Send Method *
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="send_method"
+                      value="email"
+                      checked={formData.send_method === 'email'}
+                      onChange={(e) => setFormData({ ...formData, send_method: e.target.value as any })}
+                      className="mr-2"
+                    />
+                    <span>Email Only</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="send_method"
+                      value="sms"
+                      checked={formData.send_method === 'sms'}
+                      onChange={(e) => setFormData({ ...formData, send_method: e.target.value as any })}
+                      className="mr-2"
+                    />
+                    <span>SMS/Text Only</span>
+                  </label>
+                  <label className="flex items-center">
+                    <input
+                      type="radio"
+                      name="send_method"
+                      value="both"
+                      checked={formData.send_method === 'both'}
+                      onChange={(e) => setFormData({ ...formData, send_method: e.target.value as any })}
+                      className="mr-2"
+                    />
+                    <span>Both Email & SMS</span>
+                  </label>
+                </div>
+              </div>
+
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Patient Name *
                 </label>
@@ -113,28 +179,33 @@ export default function Home() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Patient Email *
+                  Patient Email {formData.send_method !== 'sms' && '*'}
                 </label>
                 <input
                   type="email"
-                  required
+                  required={formData.send_method !== 'sms'}
                   value={formData.patient_email}
                   onChange={(e) => setFormData({ ...formData, patient_email: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary"
+                  placeholder={formData.send_method === 'sms' ? 'Optional for SMS only' : 'patient@example.com'}
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Phone Number (optional)
+                  Phone Number {(formData.send_method === 'sms' || formData.send_method === 'both') && '*'}
                 </label>
                 <input
                   type="tel"
+                  required={formData.send_method === 'sms' || formData.send_method === 'both'}
                   placeholder="(555) 123-4567"
                   value={formData.phone_number}
                   onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
                   className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary"
                 />
+                {(formData.send_method === 'sms' || formData.send_method === 'both') && (
+                  <p className="text-xs text-gray-500 mt-1">Required for SMS delivery</p>
+                )}
               </div>
 
               <div>
@@ -167,7 +238,10 @@ export default function Home() {
                 disabled={sending}
                 className="w-full py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-lg hover:opacity-90 disabled:opacity-50"
               >
-                {sending ? 'Sending...' : 'Send Assessment Link via Email'}
+                {sending ? 'Processing...' :
+                 formData.send_method === 'email' ? 'Send Assessment Link via Email' :
+                 formData.send_method === 'sms' ? 'Generate SMS Link' :
+                 'Send via Email & Generate SMS'}
               </button>
             </form>
 
@@ -179,9 +253,43 @@ export default function Home() {
               }`}>
                 {result.success && (
                   <>
-                    <p className="font-semibold">✓ Assessment email sent successfully!</p>
-                    <p className="text-sm mt-2">The patient will receive the questionnaire link at {formData.patient_email}</p>
-                    <p className="text-sm">Link: {result.questionnaire_link}</p>
+                    {formData.send_method === 'email' ? (
+                      <>
+                        <p className="font-semibold">✓ Assessment email sent successfully!</p>
+                        <p className="text-sm mt-2">The patient will receive the questionnaire link at {formData.patient_email}</p>
+                        <p className="text-sm">Link: {result.questionnaire_link}</p>
+                      </>
+                    ) : formData.send_method === 'sms' ? (
+                      <>
+                        <p className="font-semibold">📱 SMS Message Ready!</p>
+                        <p className="text-sm mt-2 mb-3">Copy the message below and send it to {formData.phone_number}:</p>
+                        <div className="bg-white p-3 rounded border border-green-200 text-sm font-mono whitespace-pre-wrap">
+                          {formatSmsMessage(formData.patient_name, result.questionnaire_link)}
+                        </div>
+                        <button
+                          onClick={() => copyToClipboard(formatSmsMessage(formData.patient_name, result.questionnaire_link))}
+                          className="mt-3 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                        >
+                          {copiedToClipboard ? '✓ Copied!' : '📋 Copy SMS Message'}
+                        </button>
+                        <p className="text-xs mt-2 italic">Tip: You can send this via your phone's native messaging app or any SMS service.</p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="font-semibold">✓ Email sent & SMS ready!</p>
+                        <p className="text-sm mt-2">Email sent to: {formData.patient_email}</p>
+                        <p className="text-sm mt-2 mb-3">Copy this SMS for {formData.phone_number}:</p>
+                        <div className="bg-white p-3 rounded border border-green-200 text-sm font-mono whitespace-pre-wrap">
+                          {formatSmsMessage(formData.patient_name, result.questionnaire_link)}
+                        </div>
+                        <button
+                          onClick={() => copyToClipboard(formatSmsMessage(formData.patient_name, result.questionnaire_link))}
+                          className="mt-3 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                        >
+                          {copiedToClipboard ? '✓ Copied!' : '📋 Copy SMS Message'}
+                        </button>
+                      </>
+                    )}
                   </>
                 )}
                 {result.warning && (

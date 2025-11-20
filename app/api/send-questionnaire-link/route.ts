@@ -11,13 +11,30 @@ export async function POST(request: NextRequest) {
       patient_email,
       patient_dob,
       phone_number,
-      clinician_email
+      clinician_email,
+      send_method = 'email'
     } = body
 
-    // Validate required fields
-    if (!patient_name || !patient_email || !clinician_email) {
+    // Validate required fields based on send method
+    if (!patient_name || !clinician_email) {
       return NextResponse.json(
         { error: 'Missing required fields' },
+        { status: 400 }
+      )
+    }
+
+    // Check email is provided if sending via email
+    if ((send_method === 'email' || send_method === 'both') && !patient_email) {
+      return NextResponse.json(
+        { error: 'Email is required for email delivery' },
+        { status: 400 }
+      )
+    }
+
+    // Check phone is provided if sending via SMS
+    if ((send_method === 'sms' || send_method === 'both') && !phone_number) {
+      return NextResponse.json(
+        { error: 'Phone number is required for SMS delivery' },
         { status: 400 }
       )
     }
@@ -71,36 +88,39 @@ export async function POST(request: NextRequest) {
     const questionnaire_link = `${baseUrl}/questionnaire/${unique_id}`
     const session_id = session.id
 
-    // Send email with questionnaire link
-    const emailResult = await sendQuestionnaireInvitation(
-      patient_email,
-      patient_name,
-      questionnaire_link,
-      expires_at.toISOString()
-    )
-
-    // Log email attempt
-    await supabase.from('email_logs').insert({
-      session_id,
-      recipient_email: patient_email,
-      email_type: 'questionnaire_invitation',
-      subject: 'Your ADHD Assessment Questionnaire',
-      status: emailResult.success ? 'sent' : 'failed',
-      error_message: emailResult.error
-    })
-
-    if (!emailResult.success) {
-      // Session was created but email failed
-      return NextResponse.json(
-        {
-          warning: 'Session created but email failed to send',
-          error: emailResult.error,
-          session_id,
-          questionnaire_link,
-          manual_send_required: true
-        },
-        { status: 207 } // Multi-Status
+    // Handle email sending if requested
+    let emailResult: { success: boolean; messageId?: string; error?: string } = { success: true }
+    if (send_method === 'email' || send_method === 'both') {
+      emailResult = await sendQuestionnaireInvitation(
+        patient_email,
+        patient_name,
+        questionnaire_link,
+        expires_at.toISOString()
       )
+
+      // Log email attempt
+      await supabase.from('email_logs').insert({
+        session_id,
+        recipient_email: patient_email,
+        email_type: 'questionnaire_invitation',
+        subject: 'Your ADHD Assessment Questionnaire',
+        status: emailResult.success ? 'sent' : 'failed',
+        error_message: emailResult.error || null
+      })
+
+      if (!emailResult.success && send_method === 'email') {
+        // Session was created but email failed (only error if email was the only method)
+        return NextResponse.json(
+          {
+            warning: 'Session created but email failed to send',
+            error: emailResult.error,
+            session_id,
+            questionnaire_link,
+            manual_send_required: true
+          },
+          { status: 207 } // Multi-Status
+        )
+      }
     }
 
     return NextResponse.json({
@@ -108,8 +128,10 @@ export async function POST(request: NextRequest) {
       session_id,
       unique_id,
       questionnaire_link,
-      email_sent: true,
-      message_id: emailResult.messageId
+      email_sent: send_method !== 'sms' ? emailResult.success : false,
+      sms_ready: send_method === 'sms' || send_method === 'both',
+      message_id: emailResult.messageId,
+      send_method
     })
   } catch (error) {
     console.error('Error sending questionnaire email:', error)
