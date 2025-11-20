@@ -16,12 +16,14 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
   const [responses, setResponses] = useState<QuestionResponse[]>([])
   const [selectedValue, setSelectedValue] = useState<number | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isRevisiting, setIsRevisiting] = useState(false)
 
   const question = ASRS_QUESTIONS[currentQuestion]
   const progress = ((currentQuestion + 1) / TOTAL_QUESTIONS) * 100
 
   useEffect(() => {
     // Reset selected value when changing questions
+    // Don't reset isRevisiting here - it's managed by navigation
     setSelectedValue(null)
   }, [currentQuestion])
 
@@ -43,6 +45,7 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
 
   const handleResponse = (value: number) => {
     setSelectedValue(value)
+    setIsRevisiting(false) // User made a fresh selection, not revisiting
 
     // Auto-advance after 400ms
     setTimeout(() => {
@@ -68,6 +71,7 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
 
     if (currentQuestion < TOTAL_QUESTIONS - 1) {
       setCurrentQuestion(currentQuestion + 1)
+      setIsRevisiting(false) // Moving forward, not revisiting
     } else {
       // All questions answered, complete the assessment
       await completeAssessment(newResponses)
@@ -79,6 +83,7 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
       setCurrentQuestion(currentQuestion - 1)
       // Remove the last response if going back
       setResponses(responses.slice(0, -1))
+      setIsRevisiting(true) // User is going back to a previous question
     }
   }
 
@@ -208,7 +213,7 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
             ← Back
           </button>
 
-          {selectedValue !== null && (
+          {selectedValue !== null && isRevisiting && (
             <button
               onClick={() => handleNext()}
               className="px-6 py-2 bg-gradient-to-r from-primary to-secondary text-white rounded-lg hover:opacity-90"
