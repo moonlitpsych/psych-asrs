@@ -29,11 +29,16 @@ export function middleware(request: NextRequest) {
 
   // Log access for audit purposes (in production, this would go to a secure log service)
   if (process.env.NODE_ENV === 'production') {
+    // Get IP address from headers (Vercel provides these)
+    const forwardedFor = request.headers.get('x-forwarded-for')
+    const realIp = request.headers.get('x-real-ip')
+    const ip = forwardedFor?.split(',')[0].trim() || realIp || 'unknown'
+
     console.log({
       timestamp: new Date().toISOString(),
       method: request.method,
       path: request.nextUrl.pathname,
-      ip: request.ip || 'unknown',
+      ip: ip,
       userAgent: request.headers.get('user-agent') || 'unknown'
     })
   }
