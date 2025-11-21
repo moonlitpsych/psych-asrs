@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServiceSupabase } from '@/lib/supabase'
 import { calculateASRSScores } from '@/lib/scoring'
 import { QuestionResponse } from '@/types/questionnaire'
+import { isIntakeQConfigured } from '@/lib/intakeq/client'
 
 export async function POST(
   request: NextRequest,
@@ -121,6 +122,32 @@ export async function POST(
     } catch (emailError) {
       console.error('Failed to send email notification:', emailError)
       // Don't fail the completion if email fails
+    }
+
+    // Submit to IntakeQ if configured
+    if (isIntakeQConfigured()) {
+      try {
+        console.log('Submitting ASRS results to IntakeQ...')
+        const intakeqResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL}/api/intakeq/submit-results`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: session.unique_id,
+            intakeqClientId: session.metadata?.intakeq_client_id || null
+          })
+        })
+
+        if (intakeqResponse.ok) {
+          const intakeqResult = await intakeqResponse.json()
+          console.log('IntakeQ submission successful:', intakeqResult)
+        } else {
+          const error = await intakeqResponse.text()
+          console.error('IntakeQ submission failed:', error)
+        }
+      } catch (intakeqError) {
+        console.error('Failed to submit to IntakeQ:', intakeqError)
+        // Don't fail the completion if IntakeQ submission fails
+      }
     }
 
     return NextResponse.json({

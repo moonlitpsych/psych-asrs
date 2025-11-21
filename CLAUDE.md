@@ -1,13 +1,15 @@
 # ASRS Assessment Tool - Project Documentation
 
 ## Overview
-A full-stack web application for administering the Adult ADHD Self-Report Scale (ASRS) Version 1.1. Healthcare providers can send assessment links to patients via email, patients complete the 18-question assessment, and results are automatically calculated and sent back to the provider.
+A full-stack web application for administering the Adult ADHD Self-Report Scale (ASRS) Version 1.1. Healthcare providers can send assessment links to patients via email or SMS, patients complete the 18-question assessment, and results are automatically calculated and sent back to the provider. Features IntakeQ EMR integration for seamless clinical workflows.
 
-## Current Status: ✅ FULLY FUNCTIONAL
+## Current Status: ✅ PRODUCTION READY
 - Assessment workflow complete and tested
-- Email notifications working
+- Email AND SMS delivery options
 - Dashboard displaying results
 - Scoring algorithm implemented
+- Moonlit Psychiatry branding applied
+- IntakeQ EMR integration in progress
 
 ## Architecture
 
@@ -28,13 +30,17 @@ questionnaire_results      -- Stores calculated scores and results
 
 ### Key Features Implemented
 1. ✅ Provider can create assessment sessions with patient info
-2. ✅ Email sent to patient with unique assessment link
+2. ✅ Email OR SMS sent to patient with unique assessment link
 3. ✅ Patient completes 18-question ASRS assessment
 4. ✅ Automatic score calculation (Part A and Total scores)
 5. ✅ Email notifications sent upon completion
 6. ✅ Provider dashboard with all assessments and scores
 7. ✅ Session expiration after 48 hours
 8. ✅ Secure dashboard with password protection
+9. ✅ Copy-to-clipboard SMS functionality
+10. ✅ Auto-advance questionnaire (no redundant Next button)
+11. ✅ Moonlit brand design system
+12. 🚧 IntakeQ EMR integration (Phase 1 in progress)
 
 ## Important Files
 
@@ -63,12 +69,23 @@ SUPABASE_SERVICE_KEY=your_service_key
 
 # Resend (Email)
 RESEND_API_KEY=your_resend_key
+RESEND_FROM_EMAIL=notifications@yourdomain.com
 
 # Dashboard
 NEXT_PUBLIC_DASHBOARD_PASSWORD=your_dashboard_password
 
-# App URL (for email links)
-NEXT_PUBLIC_APP_URL=http://localhost:3000  # or production URL
+# App URL (IMPORTANT: Update for production!)
+NEXT_PUBLIC_APP_URL=https://psych-asrs-one.vercel.app
+
+# IntakeQ Integration (Phase 1)
+INTAKEQ_API_KEY=your_intakeq_api_key
+INTAKEQ_API_URL=https://intakeq.com/api/v1
+INTAKEQ_PRACTITIONER_ID=your_practitioner_id
+
+# Optional - SMS (Twilio)
+TWILIO_ACCOUNT_SID=your_account_sid  # Future enhancement
+TWILIO_AUTH_TOKEN=your_auth_token    # Future enhancement
+TWILIO_PHONE_NUMBER=+1234567890      # Future enhancement
 ```
 
 ## Known Issues & Solutions
@@ -108,6 +125,19 @@ GRANT ALL ON questionnaire_results TO authenticated, anon, service_role;
 6. Check clinician email for results notification
 7. Login to dashboard (password in env)
 8. View completed assessment with scores
+
+## Recent Updates (November 2024)
+
+### ✅ Completed Enhancements
+1. **SMS/Text Support**: Send assessment links via text message with copy-to-clipboard
+2. **Moonlit Branding**: Applied coral/navy/cream color scheme matching Moonlit Psychiatry
+3. **UX Improvements**: Removed redundant Next button, auto-advance after selection
+4. **Production Deployment**: Successfully deployed on Vercel with proper URL configuration
+
+### 🚧 In Progress: IntakeQ Integration
+- **Phase 1**: Submit ASRS results to IntakeQ as treatment notes
+- **Phase 2**: Webhook automation for triggered assessments
+- **Phase 3**: Full bi-directional patient data sync
 
 ## Scoring Algorithm
 - **Part A**: First 6 questions, threshold 4+ for positive screening

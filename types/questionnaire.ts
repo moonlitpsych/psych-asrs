@@ -1,3 +1,15 @@
+export interface QuestionnaireDefinition {
+  code: string
+  name: string
+  description: string
+  instructions: string
+  questions: ASRSQuestion[]
+  responseOptions: typeof RESPONSE_OPTIONS
+  totalQuestions: number
+  scoringFunction: (responses: QuestionResponse[]) => any
+  timeframe: string
+}
+
 export interface QuestionnaireSession {
   id: string
   unique_id: string
