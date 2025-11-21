@@ -131,7 +131,7 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-moonlit-coral mx-auto mb-4"></div>
           <p className="text-gray-600">Submitting your responses...</p>
         </div>
       </div>
@@ -144,7 +144,7 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
       <div className="mb-8">
         <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
           <div
-            className="h-full bg-gradient-to-r from-primary to-secondary transition-all duration-500"
+            className="h-full bg-moonlit-coral transition-all duration-500"
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -157,7 +157,7 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
       {/* Question */}
       <div className="bg-white rounded-lg shadow-lg p-8">
         <div className="mb-2">
-          <span className="inline-block px-3 py-1 bg-gradient-to-r from-primary to-secondary text-white text-sm font-semibold rounded-full">
+          <span className="inline-block px-3 py-1 bg-moonlit-coral text-white text-sm font-semibold rounded-full">
             Question {question.id}
           </span>
         </div>
@@ -172,9 +172,9 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
             <button
               key={option.value}
               onClick={() => handleResponse(option.value)}
-              className={`w-full text-left p-4 rounded-lg border-2 transition-all hover:border-primary hover:bg-purple-50 ${
+              className={`w-full text-left p-4 rounded-lg border-2 transition-all hover:border-moonlit-coral hover:bg-moonlit-cream ${
                 selectedValue === option.value
-                  ? 'border-primary bg-purple-50'
+                  ? 'border-moonlit-coral bg-moonlit-cream'
                   : 'border-gray-200'
               }`}
             >
@@ -183,7 +183,7 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
                   <div
                     className={`w-5 h-5 rounded-full border-2 ${
                       selectedValue === option.value
-                        ? 'border-primary bg-primary'
+                        ? 'border-moonlit-coral bg-moonlit-coral'
                         : 'border-gray-300'
                     }`}
                   >
@@ -216,7 +216,7 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
           {selectedValue !== null && isRevisiting && (
             <button
               onClick={() => handleNext()}
-              className="px-6 py-2 bg-gradient-to-r from-primary to-secondary text-white rounded-lg hover:opacity-90"
+              className="px-6 py-2 bg-moonlit-coral text-white rounded-full hover:bg-moonlit-coral-hover font-medium transition"
             >
               {currentQuestion === TOTAL_QUESTIONS - 1 ? 'Complete' : 'Next →'}
             </button>
@@ -230,7 +230,7 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
 
         {/* Part A Complete Message */}
         {currentQuestion === 5 && (
-          <div className="text-center mt-6 text-secondary font-semibold">
+          <div className="text-center mt-6 text-moonlit-coral font-semibold">
             Part A Complete - Continue to Part B
           </div>
         )}

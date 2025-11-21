@@ -73,13 +73,13 @@ This link expires in 48 hours. Reply STOP to opt out.`
   }
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50">
+    <main className="min-h-screen bg-moonlit-cream">
       <div className="max-w-6xl mx-auto p-8">
         <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent mb-4">
+          <h1 className="text-5xl font-bold text-moonlit-navy mb-4">
             ASRS Assessment Tool
           </h1>
-          <p className="text-xl text-gray-600">
+          <p className="text-xl text-moonlit-gray">
             Adult ADHD Self-Report Scale Digital Assessment Platform
           </p>
         </div>
@@ -95,7 +95,7 @@ This link expires in 48 hours. Reply STOP to opt out.`
             </p>
             <Link
               href="/dashboard"
-              className="block w-full py-3 bg-gradient-to-r from-primary to-secondary text-white text-center rounded-lg hover:opacity-90 transition"
+              className="block w-full py-3 bg-moonlit-coral text-white text-center rounded-full hover:bg-moonlit-coral-hover transition font-medium"
             >
               Open Dashboard
             </Link>
@@ -111,7 +111,7 @@ This link expires in 48 hours. Reply STOP to opt out.`
             </p>
             <button
               onClick={() => setShowSendForm(!showSendForm)}
-              className="w-full py-3 bg-gradient-to-r from-green-500 to-teal-500 text-white rounded-lg hover:opacity-90 transition"
+              className="w-full py-3 bg-moonlit-coral text-white rounded-full hover:bg-moonlit-coral-hover transition font-medium"
             >
               {showSendForm ? 'Hide Form' : 'Send New Assessment'}
             </button>
@@ -173,7 +173,7 @@ This link expires in 48 hours. Reply STOP to opt out.`
                   required
                   value={formData.patient_name}
                   onChange={(e) => setFormData({ ...formData, patient_name: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-moonlit-coral"
                 />
               </div>
 
@@ -186,7 +186,7 @@ This link expires in 48 hours. Reply STOP to opt out.`
                   required={formData.send_method !== 'sms'}
                   value={formData.patient_email}
                   onChange={(e) => setFormData({ ...formData, patient_email: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-moonlit-coral"
                   placeholder={formData.send_method === 'sms' ? 'Optional for SMS only' : 'patient@example.com'}
                 />
               </div>
@@ -201,7 +201,7 @@ This link expires in 48 hours. Reply STOP to opt out.`
                   placeholder="(555) 123-4567"
                   value={formData.phone_number}
                   onChange={(e) => setFormData({ ...formData, phone_number: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-moonlit-coral"
                 />
                 {(formData.send_method === 'sms' || formData.send_method === 'both') && (
                   <p className="text-xs text-gray-500 mt-1">Required for SMS delivery</p>
@@ -216,7 +216,7 @@ This link expires in 48 hours. Reply STOP to opt out.`
                   type="date"
                   value={formData.patient_dob}
                   onChange={(e) => setFormData({ ...formData, patient_dob: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-moonlit-coral"
                 />
               </div>
 
@@ -229,14 +229,14 @@ This link expires in 48 hours. Reply STOP to opt out.`
                   required
                   value={formData.clinician_email}
                   onChange={(e) => setFormData({ ...formData, clinician_email: e.target.value })}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-moonlit-coral"
                 />
               </div>
 
               <button
                 type="submit"
                 disabled={sending}
-                className="w-full py-3 bg-gradient-to-r from-primary to-secondary text-white rounded-lg hover:opacity-90 disabled:opacity-50"
+                className="w-full py-3 bg-moonlit-coral text-white rounded-full hover:bg-moonlit-coral-hover disabled:opacity-50 font-medium transition"
               >
                 {sending ? 'Processing...' :
                  formData.send_method === 'email' ? 'Send Assessment Link via Email' :
@@ -268,7 +268,7 @@ This link expires in 48 hours. Reply STOP to opt out.`
                         </div>
                         <button
                           onClick={() => copyToClipboard(formatSmsMessage(formData.patient_name, result.questionnaire_link))}
-                          className="mt-3 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                          className="mt-3 px-4 py-2 bg-moonlit-coral text-white rounded-full hover:bg-moonlit-coral-hover text-sm font-medium transition"
                         >
                           {copiedToClipboard ? '✓ Copied!' : '📋 Copy SMS Message'}
                         </button>
@@ -284,7 +284,7 @@ This link expires in 48 hours. Reply STOP to opt out.`
                         </div>
                         <button
                           onClick={() => copyToClipboard(formatSmsMessage(formData.patient_name, result.questionnaire_link))}
-                          className="mt-3 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                          className="mt-3 px-4 py-2 bg-moonlit-coral text-white rounded-full hover:bg-moonlit-coral-hover text-sm font-medium transition"
                         >
                           {copiedToClipboard ? '✓ Copied!' : '📋 Copy SMS Message'}
                         </button>
