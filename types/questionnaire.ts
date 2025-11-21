@@ -4,7 +4,7 @@ export interface QuestionnaireDefinition {
   description: string
   instructions: string
   questions: ASRSQuestion[]
-  responseOptions: typeof RESPONSE_OPTIONS
+  responseOptions: readonly { value: number; label: string; key: string }[]
   totalQuestions: number
   scoringFunction: (responses: QuestionResponse[]) => any
   timeframe: string
@@ -23,6 +23,7 @@ export interface QuestionnaireSession {
   expires_at: string
   status: 'pending' | 'in_progress' | 'completed' | 'expired'
   clinician_email: string
+  questionnaire_type?: string // Added for multi-questionnaire support
   metadata?: Record<string, any>
 }
 

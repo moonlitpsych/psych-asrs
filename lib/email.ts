@@ -1,6 +1,43 @@
 import { Resend } from 'resend'
 import { ScoringResult } from './scoring'
 
+// Helper functions for questionnaire details
+function getQuestionnaireTitle(type: string): string {
+  switch (type) {
+    case 'PHQ9':
+      return 'Patient Health Questionnaire (PHQ-9)'
+    case 'GAD7':
+      return 'Generalized Anxiety Disorder Scale (GAD-7)'
+    case 'ASRS':
+    default:
+      return 'Adult ADHD Self-Report Scale (ASRS)'
+  }
+}
+
+function getQuestionnaireDescription(type: string): string {
+  switch (type) {
+    case 'PHQ9':
+      return 'This questionnaire helps evaluate symptoms of depression.'
+    case 'GAD7':
+      return 'This questionnaire helps evaluate symptoms of anxiety.'
+    case 'ASRS':
+    default:
+      return 'This questionnaire helps evaluate symptoms related to ADHD in adults.'
+  }
+}
+
+function getQuestionCount(type: string): string {
+  switch (type) {
+    case 'PHQ9':
+      return '9 questions'
+    case 'GAD7':
+      return '7 questions'
+    case 'ASRS':
+    default:
+      return '18 questions'
+  }
+}
+
 // Initialize Resend client
 function getResendClient() {
   const apiKey = process.env.RESEND_API_KEY
@@ -25,7 +62,8 @@ export async function sendQuestionnaireInvitation(
   patientEmail: string,
   patientName: string,
   questionnaireLink: string,
-  expiresAt: string
+  expiresAt: string,
+  questionnaireType: string = 'ASRS'
 ): Promise<SendEmailResult> {
   try {
     const resend = getResendClient()
@@ -54,18 +92,18 @@ export async function sendQuestionnaireInvitation(
         <body>
           <div class="container">
             <div class="header">
-              <h1>Adult ADHD Self-Report Scale Assessment</h1>
+              <h1>${getQuestionnaireTitle(questionnaireType)}</h1>
             </div>
 
             <div class="content">
               <p>Dear ${patientName},</p>
 
-              <p>Your healthcare provider has requested that you complete the Adult ADHD Self-Report Scale (ASRS) assessment. This questionnaire helps evaluate symptoms related to ADHD in adults.</p>
+              <p>Your healthcare provider has requested that you complete the ${getQuestionnaireTitle(questionnaireType)} assessment. ${getQuestionnaireDescription(questionnaireType)}</p>
 
               <div class="info-box">
                 <strong>What to expect:</strong>
                 <ul style="margin: 10px 0;">
-                  <li>18 questions about your experiences over the past 6 months</li>
+                  <li>${getQuestionCount(questionnaireType)} about your recent experiences</li>
                   <li>Takes approximately 5-10 minutes to complete</li>
                   <li>Your responses are automatically saved as you progress</li>
                   <li>Results will be shared with your healthcare provider</li>
@@ -102,7 +140,7 @@ export async function sendQuestionnaireInvitation(
     const result = await resend.emails.send({
       from: fromEmail,
       to: patientEmail,
-      subject: 'Your ADHD Assessment Questionnaire',
+      subject: `Your ${questionnaireType === 'ASRS' ? 'ADHD' : questionnaireType === 'PHQ9' ? 'Depression' : 'Anxiety'} Assessment Questionnaire`,
       html: emailHtml
     })
 

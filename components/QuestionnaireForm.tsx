@@ -1,39 +1,54 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { ASRS_QUESTIONS, TOTAL_QUESTIONS } from '@/lib/questionnaire-data'
-import { RESPONSE_OPTIONS, QuestionResponse } from '@/types/questionnaire'
-import { calculateASRSScores } from '@/lib/scoring'
+import { QuestionResponse } from '@/types/questionnaire'
+import { getQuestionnaireDefinition, scoreQuestionnaire } from '@/lib/questionnaires'
 
 interface QuestionnaireFormProps {
   sessionId: string
   patientName: string
-  onComplete?: (responses: QuestionResponse[]) => void
+  questionnaireType: string
+  onComplete?: (responses: QuestionResponse[], scores: any) => void
 }
 
-export default function QuestionnaireForm({ sessionId, patientName, onComplete }: QuestionnaireFormProps) {
+export default function QuestionnaireForm({
+  sessionId,
+  patientName,
+  questionnaireType = 'ASRS',
+  onComplete
+}: QuestionnaireFormProps) {
   const [currentQuestion, setCurrentQuestion] = useState(0)
   const [responses, setResponses] = useState<QuestionResponse[]>([])
   const [selectedValue, setSelectedValue] = useState<number | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isRevisiting, setIsRevisiting] = useState(false)
 
-  const question = ASRS_QUESTIONS[currentQuestion]
-  const progress = ((currentQuestion + 1) / TOTAL_QUESTIONS) * 100
+  // Get questionnaire definition
+  const definition = getQuestionnaireDefinition(questionnaireType)
+
+  if (!definition) {
+    return <div className="text-center p-8 text-red-600">Invalid questionnaire type: {questionnaireType}</div>
+  }
+
+  const { questions, responseOptions, totalQuestions, instructions } = definition
+  const question = questions[currentQuestion]
+  const progress = ((currentQuestion + 1) / totalQuestions) * 100
 
   useEffect(() => {
     // Reset selected value when changing questions
-    // Don't reset isRevisiting here - it's managed by navigation
     setSelectedValue(null)
   }, [currentQuestion])
 
   useEffect(() => {
     // Keyboard navigation
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key >= '1' && e.key <= '5') {
+      const maxKey = responseOptions.length.toString()
+      if (e.key >= '1' && e.key <= maxKey) {
         const value = parseInt(e.key) - 1
-        setSelectedValue(value)
-        handleResponse(value)
+        if (value < responseOptions.length) {
+          setSelectedValue(value)
+          handleResponse(value)
+        }
       } else if (e.key === 'Enter' && selectedValue !== null) {
         handleNext()
       }
@@ -41,7 +56,7 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
 
     window.addEventListener('keydown', handleKeyPress)
     return () => window.removeEventListener('keydown', handleKeyPress)
-  }, [selectedValue, currentQuestion])
+  }, [selectedValue, currentQuestion, responseOptions.length])
 
   const handleResponse = (value: number) => {
     setSelectedValue(value)
@@ -60,7 +75,7 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
       question_number: question.id,
       question_text: question.text,
       response_value: value,
-      response_text: RESPONSE_OPTIONS[value].label
+      response_text: responseOptions[value].label
     }
 
     const newResponses = [...responses, response]
@@ -69,7 +84,7 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
     // Save response to database
     await saveResponse(sessionId, response)
 
-    if (currentQuestion < TOTAL_QUESTIONS - 1) {
+    if (currentQuestion < totalQuestions - 1) {
       setCurrentQuestion(currentQuestion + 1)
       setIsRevisiting(false) // Moving forward, not revisiting
     } else {
@@ -103,8 +118,8 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
     setIsSubmitting(true)
 
     try {
-      // Calculate scores
-      const scores = calculateASRSScores(allResponses)
+      // Calculate scores using the appropriate scoring function
+      const scores = scoreQuestionnaire(questionnaireType, allResponses)
 
       // Save results to database
       await fetch(`/api/sessions/${sessionId}/complete`, {
@@ -112,13 +127,14 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           responses: allResponses,
-          scores
+          scores,
+          questionnaire_type: questionnaireType
         })
       })
 
       // Call the onComplete callback if provided
       if (onComplete) {
-        onComplete(allResponses)
+        onComplete(allResponses, scores)
       }
     } catch (error) {
       console.error('Failed to complete assessment:', error)
@@ -140,6 +156,13 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
 
   return (
     <div className="max-w-2xl mx-auto">
+      {/* Instructions */}
+      {currentQuestion === 0 && instructions && (
+        <div className="mb-6 p-4 bg-blue-50 rounded-lg">
+          <p className="text-sm text-blue-800">{instructions}</p>
+        </div>
+      )}
+
       {/* Progress Bar */}
       <div className="mb-8">
         <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
@@ -149,8 +172,10 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
           />
         </div>
         <div className="mt-2 text-center text-sm text-gray-600">
-          Question {currentQuestion + 1} of {TOTAL_QUESTIONS}
-          {question.part === 'A' ? ' (Part A)' : ' (Part B)'}
+          Question {currentQuestion + 1} of {totalQuestions}
+          {question.part && questionnaireType === 'ASRS' &&
+            ` (Part ${question.part})`
+          }
         </div>
       </div>
 
@@ -168,24 +193,22 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
 
         {/* Response Options */}
         <div className="space-y-3">
-          {RESPONSE_OPTIONS.map((option) => (
+          {responseOptions.map((option) => (
             <button
               key={option.value}
               onClick={() => handleResponse(option.value)}
-              className={`w-full text-left p-4 rounded-lg border-2 transition-all hover:border-moonlit-coral hover:bg-moonlit-cream ${
-                selectedValue === option.value
+              className={`w-full text-left p-4 rounded-lg border-2 transition-all hover:border-moonlit-coral hover:bg-moonlit-cream ${selectedValue === option.value
                   ? 'border-moonlit-coral bg-moonlit-cream'
                   : 'border-gray-200'
-              }`}
+                }`}
             >
               <div className="flex items-center">
                 <div className="flex-shrink-0 mr-3">
                   <div
-                    className={`w-5 h-5 rounded-full border-2 ${
-                      selectedValue === option.value
+                    className={`w-5 h-5 rounded-full border-2 ${selectedValue === option.value
                         ? 'border-moonlit-coral bg-moonlit-coral'
                         : 'border-gray-300'
-                    }`}
+                      }`}
                   >
                     {selectedValue === option.value && (
                       <div className="w-full h-full flex items-center justify-center">
@@ -218,18 +241,18 @@ export default function QuestionnaireForm({ sessionId, patientName, onComplete }
               onClick={() => handleNext()}
               className="px-6 py-2 bg-moonlit-coral text-white rounded-full hover:bg-moonlit-coral-hover font-medium transition"
             >
-              {currentQuestion === TOTAL_QUESTIONS - 1 ? 'Complete' : 'Next →'}
+              {currentQuestion === totalQuestions - 1 ? 'Complete' : 'Next →'}
             </button>
           )}
         </div>
 
         {/* Keyboard hint */}
         <div className="text-center mt-4 text-sm text-gray-500">
-          Press 1-5 to select, Enter to continue
+          Press 1-{responseOptions.length} to select, Enter to continue
         </div>
 
-        {/* Part A Complete Message */}
-        {currentQuestion === 5 && (
+        {/* Part completion messages for ASRS */}
+        {questionnaireType === 'ASRS' && currentQuestion === 5 && (
           <div className="text-center mt-6 text-moonlit-coral font-semibold">
             Part A Complete - Continue to Part B
           </div>

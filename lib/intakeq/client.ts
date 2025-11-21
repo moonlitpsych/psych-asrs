@@ -156,9 +156,70 @@ function formatASRSForIntakeQ(
 }
 
 /**
+ * Generate PHQ-9 interpretation
+ */
+function generatePHQ9Interpretation(scores: any): string {
+  let interpretation = `Patient completed the Patient Health Questionnaire-9 (PHQ-9). `
+  interpretation += `Total score: ${scores.totalScore}/27 (${scores.severity}). `
+
+  switch (scores.severity.toLowerCase()) {
+    case 'severe':
+      interpretation += `Severe depression symptoms present. Immediate evaluation and treatment initiation recommended. `
+      break
+    case 'moderately severe':
+      interpretation += `Moderately severe depression symptoms. Treatment with antidepressants and/or psychotherapy indicated. `
+      break
+    case 'moderate':
+      interpretation += `Moderate depression symptoms. Consider counseling and/or pharmacotherapy. `
+      break
+    case 'mild':
+      interpretation += `Mild depression symptoms. Monitor and consider watchful waiting or counseling. `
+      break
+    default:
+      interpretation += `Minimal depression symptoms. No treatment indicated at this time. `
+  }
+
+  interpretation += `NOTE: PHQ-9 is a screening tool. Clinical interview required for diagnosis.`
+  return interpretation
+}
+
+/**
+ * Generate GAD-7 interpretation
+ */
+function generateGAD7Interpretation(scores: any): string {
+  let interpretation = `Patient completed the Generalized Anxiety Disorder-7 (GAD-7) scale. `
+  interpretation += `Total score: ${scores.totalScore}/21 (${scores.severity}). `
+
+  switch (scores.severity.toLowerCase()) {
+    case 'severe':
+      interpretation += `Severe anxiety symptoms present. Further evaluation and treatment strongly recommended. `
+      break
+    case 'moderate':
+      interpretation += `Moderate anxiety symptoms. Consider therapy and/or medication evaluation. `
+      break
+    case 'mild':
+      interpretation += `Mild anxiety symptoms. Consider monitoring or counseling intervention. `
+      break
+    default:
+      interpretation += `Minimal anxiety symptoms. Continue monitoring if concerns persist. `
+  }
+
+  interpretation += `NOTE: GAD-7 is a screening tool. Comprehensive assessment needed for diagnosis.`
+  return interpretation
+}
+
+/**
  * Generate professional clinical interpretation note
  */
-function generateClinicalInterpretation(scores: ScoringResult): string {
+function generateClinicalInterpretation(scores: any): string {
+  // Handle different questionnaire types
+  if (scores.assessmentType === 'PHQ9') {
+    return generatePHQ9Interpretation(scores)
+  } else if (scores.assessmentType === 'GAD7') {
+    return generateGAD7Interpretation(scores)
+  }
+
+  // Default ASRS interpretation
   let interpretation = `Patient completed the Adult ADHD Self-Report Scale (ASRS) Version 1.1. `
 
   // Part A interpretation

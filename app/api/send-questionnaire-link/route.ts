@@ -12,7 +12,8 @@ export async function POST(request: NextRequest) {
       patient_dob,
       phone_number,
       clinician_email,
-      send_method = 'email'
+      send_method = 'email',
+      questionnaire_type = 'ASRS' // New field with default for backward compatibility
     } = body
 
     // Validate required fields based on send method
@@ -59,7 +60,7 @@ export async function POST(request: NextRequest) {
       parseInt(process.env.SESSION_EXPIRY_HOURS || '48')
     )
 
-    // Create session in database
+    // Create session in database with questionnaire type
     const { data: session, error: sessionError } = await supabase
       .from('questionnaire_sessions')
       .insert({
@@ -69,6 +70,7 @@ export async function POST(request: NextRequest) {
         patient_dob,
         phone_number,
         clinician_email,
+        questionnaire_type, // Add the questionnaire type
         expires_at: expires_at.toISOString(),
         status: 'pending'
       })
@@ -95,7 +97,8 @@ export async function POST(request: NextRequest) {
         patient_email,
         patient_name,
         questionnaire_link,
-        expires_at.toISOString()
+        expires_at.toISOString(),
+        questionnaire_type // Pass the questionnaire type to email function
       )
 
       // Log email attempt
@@ -103,7 +106,7 @@ export async function POST(request: NextRequest) {
         session_id,
         recipient_email: patient_email,
         email_type: 'questionnaire_invitation',
-        subject: 'Your ADHD Assessment Questionnaire',
+        subject: `Your ${questionnaire_type} Assessment Questionnaire`,
         status: emailResult.success ? 'sent' : 'failed',
         error_message: emailResult.error || null
       })
@@ -128,6 +131,7 @@ export async function POST(request: NextRequest) {
       session_id,
       unique_id,
       questionnaire_link,
+      questionnaire_type,
       email_sent: send_method !== 'sms' ? emailResult.success : false,
       sms_ready: send_method === 'sms' || send_method === 'both',
       message_id: emailResult.messageId,

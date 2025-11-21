@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
+import { getAvailableQuestionnaires } from '@/lib/questionnaires'
 
 export default function Home() {
   const [showSendForm, setShowSendForm] = useState(false)
@@ -11,11 +12,15 @@ export default function Home() {
     patient_dob: '',
     phone_number: '',
     clinician_email: process.env.NEXT_PUBLIC_CLINICIAN_EMAIL || '',
-    send_method: 'email' as 'email' | 'sms' | 'both'
+    send_method: 'email' as 'email' | 'sms' | 'both',
+    questionnaire_type: 'ASRS' // New field
   })
   const [sending, setSending] = useState(false)
   const [result, setResult] = useState<any>(null)
   const [copiedToClipboard, setCopiedToClipboard] = useState(false)
+
+  // Get available questionnaires
+  const questionnaires = getAvailableQuestionnaires()
 
   const copyToClipboard = async (text: string) => {
     try {
@@ -27,8 +32,9 @@ export default function Home() {
     }
   }
 
-  const formatSmsMessage = (patientName: string, link: string) => {
-    return `Hi ${patientName}, your provider has requested you complete the ADHD assessment. Please click the link below to begin (takes 5-10 min):
+  const formatSmsMessage = (patientName: string, questionnaireType: string, link: string) => {
+    const qName = questionnaires.find(q => q.code === questionnaireType)?.name || 'assessment'
+    return `Hi ${patientName}, your provider has requested you complete the ${qName}. Please click the link below to begin (takes 5-10 min):
 
 ${link}
 
@@ -51,9 +57,7 @@ This link expires in 48 hours. Reply STOP to opt out.`
       setResult(data)
 
       if (data.success) {
-        // Reset form on success (but keep the result visible)
         setCopiedToClipboard(false)
-        // Only reset form if not SMS (since user needs to copy the message)
         if (formData.send_method === 'email') {
           setFormData({
             patient_name: '',
@@ -61,7 +65,8 @@ This link expires in 48 hours. Reply STOP to opt out.`
             patient_dob: '',
             phone_number: '',
             clinician_email: formData.clinician_email,
-            send_method: 'email'
+            send_method: 'email',
+            questionnaire_type: 'ASRS'
           })
         }
       }
@@ -77,10 +82,10 @@ This link expires in 48 hours. Reply STOP to opt out.`
       <div className="max-w-6xl mx-auto p-8">
         <div className="text-center mb-12">
           <h1 className="text-5xl font-bold text-moonlit-navy mb-4">
-            ASRS Assessment Tool
+            Psychiatric Assessment Platform
           </h1>
           <p className="text-xl text-moonlit-gray">
-            Adult ADHD Self-Report Scale Digital Assessment Platform
+            Digital screening tools for mental health assessment
           </p>
         </div>
 
@@ -107,7 +112,7 @@ This link expires in 48 hours. Reply STOP to opt out.`
               <h2 className="text-2xl font-bold text-gray-800">Send Assessment</h2>
             </div>
             <p className="text-gray-600 mb-6">
-              Send a new ASRS assessment link to a patient via email.
+              Send psychiatric screening assessments to patients via email or SMS.
             </p>
             <button
               onClick={() => setShowSendForm(!showSendForm)}
@@ -123,6 +128,27 @@ This link expires in 48 hours. Reply STOP to opt out.`
             <h3 className="text-xl font-bold text-gray-800 mb-6">Send Assessment Link</h3>
 
             <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Questionnaire Type Selection - NEW */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Assessment Type *
+                </label>
+                <select
+                  value={formData.questionnaire_type}
+                  onChange={(e) => setFormData({ ...formData, questionnaire_type: e.target.value })}
+                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-moonlit-coral"
+                >
+                  {questionnaires.map(q => (
+                    <option key={q.code} value={q.code}>
+                      {q.name} ({q.totalQuestions} questions)
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  {questionnaires.find(q => q.code === formData.questionnaire_type)?.description}
+                </p>
+              </div>
+
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Send Method *
@@ -239,24 +265,23 @@ This link expires in 48 hours. Reply STOP to opt out.`
                 className="w-full py-3 bg-moonlit-coral text-white rounded-full hover:bg-moonlit-coral-hover disabled:opacity-50 font-medium transition"
               >
                 {sending ? 'Processing...' :
-                 formData.send_method === 'email' ? 'Send Assessment Link via Email' :
-                 formData.send_method === 'sms' ? 'Generate SMS Link' :
-                 'Send via Email & Generate SMS'}
+                  formData.send_method === 'email' ? 'Send Assessment Link via Email' :
+                    formData.send_method === 'sms' ? 'Generate SMS Link' :
+                      'Send via Email & Generate SMS'}
               </button>
             </form>
 
             {result && (
-              <div className={`mt-6 p-4 rounded-lg ${
-                result.success ? 'bg-green-50 text-green-800' :
-                result.warning ? 'bg-yellow-50 text-yellow-800' :
-                'bg-red-50 text-red-800'
-              }`}>
+              <div className={`mt-6 p-4 rounded-lg ${result.success ? 'bg-green-50 text-green-800' :
+                  result.warning ? 'bg-yellow-50 text-yellow-800' :
+                    'bg-red-50 text-red-800'
+                }`}>
                 {result.success && (
                   <>
                     {formData.send_method === 'email' ? (
                       <>
                         <p className="font-semibold">✓ Assessment email sent successfully!</p>
-                        <p className="text-sm mt-2">The patient will receive the questionnaire link at {formData.patient_email}</p>
+                        <p className="text-sm mt-2">The patient will receive the {formData.questionnaire_type} questionnaire link at {formData.patient_email}</p>
                         <p className="text-sm">Link: {result.questionnaire_link}</p>
                       </>
                     ) : formData.send_method === 'sms' ? (
@@ -264,10 +289,10 @@ This link expires in 48 hours. Reply STOP to opt out.`
                         <p className="font-semibold">📱 SMS Message Ready!</p>
                         <p className="text-sm mt-2 mb-3">Copy the message below and send it to {formData.phone_number}:</p>
                         <div className="bg-white p-3 rounded border border-green-200 text-sm font-mono whitespace-pre-wrap">
-                          {formatSmsMessage(formData.patient_name, result.questionnaire_link)}
+                          {formatSmsMessage(formData.patient_name, formData.questionnaire_type, result.questionnaire_link)}
                         </div>
                         <button
-                          onClick={() => copyToClipboard(formatSmsMessage(formData.patient_name, result.questionnaire_link))}
+                          onClick={() => copyToClipboard(formatSmsMessage(formData.patient_name, formData.questionnaire_type, result.questionnaire_link))}
                           className="mt-3 px-4 py-2 bg-moonlit-coral text-white rounded-full hover:bg-moonlit-coral-hover text-sm font-medium transition"
                         >
                           {copiedToClipboard ? '✓ Copied!' : '📋 Copy SMS Message'}
@@ -280,10 +305,10 @@ This link expires in 48 hours. Reply STOP to opt out.`
                         <p className="text-sm mt-2">Email sent to: {formData.patient_email}</p>
                         <p className="text-sm mt-2 mb-3">Copy this SMS for {formData.phone_number}:</p>
                         <div className="bg-white p-3 rounded border border-green-200 text-sm font-mono whitespace-pre-wrap">
-                          {formatSmsMessage(formData.patient_name, result.questionnaire_link)}
+                          {formatSmsMessage(formData.patient_name, formData.questionnaire_type, result.questionnaire_link)}
                         </div>
                         <button
-                          onClick={() => copyToClipboard(formatSmsMessage(formData.patient_name, result.questionnaire_link))}
+                          onClick={() => copyToClipboard(formatSmsMessage(formData.patient_name, formData.questionnaire_type, result.questionnaire_link))}
                           className="mt-3 px-4 py-2 bg-moonlit-coral text-white rounded-full hover:bg-moonlit-coral-hover text-sm font-medium transition"
                         >
                           {copiedToClipboard ? '✓ Copied!' : '📋 Copy SMS Message'}
@@ -309,7 +334,7 @@ This link expires in 48 hours. Reply STOP to opt out.`
 
         <div className="mt-12 text-center text-sm text-gray-500">
           <p>HIPAA-compliant assessment platform</p>
-          <p>All data is encrypted and securely stored</p>
+          <p>Supporting ASRS, PHQ-9, and GAD-7 screening tools</p>
         </div>
       </div>
     </main>

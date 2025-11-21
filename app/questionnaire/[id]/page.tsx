@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation'
 import QuestionnaireForm from '@/components/QuestionnaireForm'
 import ResultsDisplay from '@/components/ResultsDisplay'
 import { QuestionnaireSession, QuestionResponse } from '@/types/questionnaire'
-import { calculateASRSScores } from '@/lib/scoring'
+import { getQuestionnaireDefinition, scoreQuestionnaire } from '@/lib/questionnaires'
 
 export default function QuestionnairePage() {
   const params = useParams()
@@ -64,11 +64,14 @@ export default function QuestionnairePage() {
       const responsesData = await responsesResponse.json()
 
       if (responsesData.responses && responsesData.responses.length > 0) {
-        const scores = calculateASRSScores(responsesData.responses)
+        const questionnaireType = sessionData.session?.questionnaire_type || 'ASRS'
+        const scores = scoreQuestionnaire(questionnaireType, responsesData.responses)
+
         setSession(sessionData.session)
         setResults({
           responses: responsesData.responses,
-          scores
+          scores,
+          questionnaireType
         })
         setCompleted(true)
       } else {
@@ -82,15 +85,17 @@ export default function QuestionnairePage() {
     }
   }
 
-  const handleComplete = async (responses: QuestionResponse[]) => {
-    const scores = calculateASRSScores(responses)
-
+  const handleComplete = async (responses: QuestionResponse[], scores: any) => {
     // Save completion status to database
     try {
       const response = await fetch(`/api/sessions/${sessionId}/complete`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ responses, scores })
+        body: JSON.stringify({
+          responses,
+          scores,
+          questionnaire_type: session?.questionnaire_type || 'ASRS'
+        })
       })
 
       if (!response.ok) {
@@ -102,9 +107,16 @@ export default function QuestionnairePage() {
       console.error('Error saving completion:', error)
     }
 
-    setResults({ responses, scores })
+    setResults({
+      responses,
+      scores,
+      questionnaireType: session?.questionnaire_type || 'ASRS'
+    })
     setCompleted(true)
   }
+
+  // Get questionnaire definition for display
+  const questionnaireDef = session ? getQuestionnaireDefinition(session.questionnaire_type || 'ASRS') : null
 
   if (loading) {
     return (
@@ -137,7 +149,9 @@ export default function QuestionnairePage() {
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 py-12 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-800">ASRS Assessment Results</h1>
+            <h1 className="text-3xl font-bold text-gray-800">
+              {questionnaireDef?.name || 'Assessment'} Results
+            </h1>
           </div>
           <ResultsDisplay
             patientName={session?.patient_name || ''}
@@ -146,6 +160,7 @@ export default function QuestionnairePage() {
             assessmentDate={new Date().toLocaleDateString()}
             responses={results.responses}
             scores={results.scores}
+            questionnaireType={results.questionnaireType}
           />
         </div>
       </div>
@@ -156,8 +171,12 @@ export default function QuestionnairePage() {
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-pink-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-800">Adult ADHD Self-Report Scale</h1>
-          <p className="text-gray-600 mt-2">ASRS Version 1.1</p>
+          <h1 className="text-3xl font-bold text-gray-800">
+            {questionnaireDef?.name || 'Assessment Questionnaire'}
+          </h1>
+          {questionnaireDef?.description && (
+            <p className="text-gray-600 mt-2">{questionnaireDef.description}</p>
+          )}
         </div>
 
         <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
@@ -166,7 +185,8 @@ export default function QuestionnairePage() {
               Welcome, {session?.patient_name}
             </h2>
             <p className="text-gray-600">
-              This questionnaire contains 18 questions about how you have felt and conducted yourself over the past 6 months.
+              This questionnaire contains {questionnaireDef?.totalQuestions || ''} questions
+              {questionnaireDef?.timeframe && ` about how you have felt over the ${questionnaireDef.timeframe}`}.
             </p>
             <p className="text-sm text-gray-500 mt-2">
               Your responses will be automatically saved as you progress.
@@ -177,6 +197,7 @@ export default function QuestionnairePage() {
         <QuestionnaireForm
           sessionId={sessionId}
           patientName={session?.patient_name || ''}
+          questionnaireType={session?.questionnaire_type || 'ASRS'}
           onComplete={handleComplete}
         />
       </div>
